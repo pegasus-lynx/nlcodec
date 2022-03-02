@@ -1230,7 +1230,7 @@ class ExtMWEScheme(BPEScheme):
             print(seq)
 
 
-        return ''.join(decoded_seq).replace(self.space_char, ' ')
+        return ''.join(decoded_seq)
 
     @classmethod
     def learn(cls, data:Iterator[str], vocab_size:int=0, 
