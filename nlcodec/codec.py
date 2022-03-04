@@ -1158,7 +1158,10 @@ class ExtMWEScheme(BPEScheme):
         pieces = super().encode_str(line, split_ratio)
         # print(pieces)
 
+        return pieces
+
         try:
+            
             # Second pass : Merge skipgrams from pieces
             # print()
             # print("Running Second Pass...")
@@ -1190,7 +1193,9 @@ class ExtMWEScheme(BPEScheme):
         return final_pieces
 
     def decode_str(self, seq : List[str])-> str:
-        
+       
+        return super().decode_str(seq)
+
         decoded_seq = []
         to_add = set()
         tok_to_add = dict()
@@ -1267,9 +1272,9 @@ class ExtMWEScheme(BPEScheme):
         # print(cls.TOKS)
         print(curr_indexes)
 
-        for tok in cls.TOKS:
-            name, tid = tok
-            mwes.append(Type(name, freq=0, level=-1, idx=tid))
+        #for tok in cls.TOKS:
+        #    name, tid = tok
+        #    mwes.append(Type(name, freq=0, level=-1, idx=tid))
 
         count = len(mwes)
 
