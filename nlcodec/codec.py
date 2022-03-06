@@ -508,7 +508,7 @@ class BPEScheme(CharScheme):
         return [self.table[idx].name for idx in res]
 
     def decode_str(self, seq: List[str]) -> str:
-        return ''.join(seq).replace(self.space_char, ' ').strip()
+        return ' '.join(seq)
 
     @classmethod
     def learn(cls, data: Iterator[str], vocab_size: int = 0, min_freq=WORD_MIN_FREQ,
