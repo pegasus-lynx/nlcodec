@@ -18,6 +18,7 @@ import os
 import sys
 import random
 
+from factorizer import Factorizer
 
 N_CPUS = max(1, mp.cpu_count() - 1)
 N_CPUS = int(os.environ.get('NLCODEC_THREADS', str(N_CPUS)))
@@ -64,6 +65,7 @@ class Level:
     phrase = 3
     clasz = 0   # 0 means dont split these tokens
     byte = 0   # 0 means dont split these tokens
+    factorizer = 0  # 0 means dont split these tokens
 
 
 @dataclass(frozen=True)
@@ -628,6 +630,68 @@ class ByteScheme(EncoderScheme):
         return cls.get_init_vocab()
 
 
+class FactorizerScheme(EncoderScheme):
+    level = Level.factorizer
+    name = "factorizer"
+    """
+     using hex strings to represent bytes [0-255]*3 => [00-2ff] 
+     <s> aka BOS is 769
+     </s> aka EOS is 770
+    """
+
+    def __init__(self, table: List[Type]=None, encoding='utf-8', errors="replace", 
+                 factorizer_model_path="english.dawg"):
+        self.encoding = encoding
+        self.errors = errors   # very likely, model is going to generate invalid code bytes during training
+        table = table or self.get_init_vocab()
+        super().__init__(table=table, has_reserved=False)
+        self.tokenizer = Factorizer(factorizer_model_path)
+
+    @staticmethod
+    def code_to_str(code: int) -> str:
+        return f'{code:x}'
+
+    def encode_str(self, line: str) -> List[str]:
+        encoding = self.tokenizer(line)
+        seq = []
+        for index in encoding.ids:
+            r,g,b = index
+            seq.append(self.code_to_str(r))
+            seq.append(self.code_to_str(g+256))
+            seq.append(self.code_to_str(b+512))
+        return seq
+
+    def decode_str(self, seq: List[str]) -> str:
+        indices_seq = [self.str_to_idx[piece] for piece in seq]
+        encoding_ids = []
+        for i in range(0, len(indices_seq), 3):
+            encoding_ids.append((indices_seq[i], indices_seq[i+1]-256, indices_seq[i+2]-512))
+        return self.tokenizer.decode(encoding_ids)    
+
+    def encode(self, line: str) -> List[int]:
+        pieces = self.encode_str(line)
+        return [self.str_to_idx[piece] for piece in pieces]
+
+    def decode(self, seq: List[int]) -> str:
+        pieces = [self.idx_to_str[idx] for idx in seq]
+        return self.decode_str(pieces)
+
+    @classmethod
+    def get_init_vocab(cls, *args, **kwargs):
+        vocab = [Type(name=f'{code:x}', idx=code, freq=-1, level=cls.level) for code in range(256*3)]
+        for tok, _ in [Reseved.BOS_TOK, Reseved.EOS_TOK]:
+            vocab.append(Type(name=tok, idx=len(vocab), freq=-1, level=Level.reserved))
+        log.info(f"Total {cls} vocab size {len(vocab):,}")
+        return vocab
+
+
+    @classmethod
+    def learn(cls, *args, **kwargs) -> List[Type]:
+        if args or kwargs:
+            log.warning(f"Factorizer vocabulary does not need learning; args are ignored: {args} {kwargs}")
+        return cls.get_init_vocab()
+
+
 #########################
 REGISTRY = {
     'char': CharScheme,
@@ -635,7 +699,8 @@ REGISTRY = {
     'bpe': BPEScheme,
     'subword': BPEScheme,
     'class': ClassScheme,
-    'byte': ByteScheme
+    'byte': ByteScheme,
+    'factorizer': FactorizerScheme
 }
 
 
