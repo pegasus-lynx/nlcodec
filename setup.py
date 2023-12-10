@@ -1,5 +1,9 @@
-import nlcodec
+# import nlcodec
 from pathlib import Path
+
+__version__ = '0.5.1'
+__description__ = """nlcodec is a collection of encoding schemes for natural language sequences. 
+nlcodec.db is a efficient storage and retrieval layer for integer sequences of varying lengths."""
 
 from setuptools import setup, find_packages
 
@@ -19,15 +23,15 @@ classifiers = [  # copied from https://pypi.org/classifiers/
 
 setup(
     name='nlcodec',
-    version=nlcodec.__version__,
-    description=nlcodec.__description__,
+    version=__version__,
+    description=__description__,
     long_description=long_description,
     long_description_content_type='text/markdown',
     license='Apache Software License 2.0',
     classifiers=classifiers,
     python_requires='>=3.7',
-    url='https://github.com/thammegowda/bpepp',
-    download_url='https://github.com/thammegowda/bpepp',
+    url='https://github.com/pegasus-lynx/nlcodec/tree/bytetok_schemes',
+    download_url='https://github.com/pegasus-lynx/nlcodec/tree/bytetok_schemes',
     platforms=['any'],
     author='Thamme Gowda',
     author_email='tgowdan@gmail.com',
