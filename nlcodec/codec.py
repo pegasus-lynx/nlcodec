@@ -646,6 +646,7 @@ class FactorizerScheme(EncoderScheme):
         table = table or self.get_init_vocab()
         super().__init__(table=table, has_reserved=False)
 
+        self.factorizer_model = factorizer_model
         factorizer_path = Path(factorizer_model).resolve()
         if not factorizer_path.exists():
             raise FileNotFoundError(f"Factorizer Model Path file not found: {factorizer_model}")
@@ -738,6 +739,9 @@ def load_scheme(path: Union[str, Path, TextIO]) -> EncoderScheme:
     assert meta
     if 'scheme' in meta:
         Scheme = REGISTRY[meta['scheme']]
+        if meta['scheme'] == "factorizer":
+            factorizer_model = meta['factorizer_model']
+            return Scheme(factorizer_model=factorizer_model)
     else:
         # backward compatibility;
         max_level = meta['max_level']
