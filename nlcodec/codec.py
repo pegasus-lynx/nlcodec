@@ -643,14 +643,20 @@ class FactorizerScheme(EncoderScheme):
                  factorizer_model="english.dawg"):
         self.encoding = encoding
         self.errors = errors   # very likely, model is going to generate invalid code bytes during training
+        
+        self.rtypes = len(Reseved.ALL)
         table = table or self.get_init_vocab()
-        super().__init__(table=table, has_reserved=False)
+        super().__init__(table=table)
 
+        self.verify_factorizer_model(factorizer_model)
         self.factorizer_model = factorizer_model
-        factorizer_path = Path(factorizer_model).resolve()
-        if not factorizer_path.exists():
-            raise FileNotFoundError(f"Factorizer Model Path file not found: {factorizer_model}")
         self.tokenizer = Factorizer(factorizer_model)
+
+    @staticmethod
+    def verify_factorizer_model(model):
+        path = Path(model).resolve()
+        if not path.exists():
+            raise FileNotFoundError(f"Factorizer Model Path file not found: {model}")
 
     @staticmethod
     def code_to_str(code: int) -> str:
@@ -659,6 +665,8 @@ class FactorizerScheme(EncoderScheme):
     def encode_str(self, line: str) -> List[str]:
         encoding = self.tokenizer(line)
         seq = []
+
+        offset = self.rtypes
         for index in encoding.ids:
             r,g,b = index
             seq.append(self.code_to_str(r))
@@ -669,8 +677,12 @@ class FactorizerScheme(EncoderScheme):
     def decode_str(self, seq: List[str]) -> str:
         indices_seq = [self.str_to_idx[piece] for piece in seq]
         encoding_ids = []
+
+        offset = self.rtypes
         for i in range(0, len(indices_seq), 3):
-            encoding_ids.append((indices_seq[i], indices_seq[i+1]-256, indices_seq[i+2]-512))
+            encoding_ids.append((max(indices_seq[i]-offset,0), 
+                                max(indices_seq[i+1]-(264+offset),0), 
+                                max(indices_seq[i+2]-(528+offset),0)))
         return self.tokenizer.decode(encoding_ids)    
 
     def encode(self, line: str) -> List[int]:
@@ -683,9 +695,10 @@ class FactorizerScheme(EncoderScheme):
 
     @classmethod
     def get_init_vocab(cls, *args, **kwargs):
-        vocab = [Type(name=f'{code:x}', idx=code, freq=-1, level=cls.level) for code in range(264*3)]
-        for tok, _ in [Reseved.BOS_TOK, Reseved.EOS_TOK]:
-            vocab.append(Type(name=tok, idx=len(vocab), freq=-1, level=Level.reserved))
+        vocab = Reseved.with_reserved_types()
+        rtypes = len(vocab)
+        for code in range(264*3+1):
+            vocab.append(Type(name=f'{code:x}', idx = (rtypes+code), freq=-1, level=cls.level))
         log.info(f"Total {cls} vocab size {len(vocab):,}")
         return vocab
 
@@ -750,11 +763,13 @@ def load_scheme(path: Union[str, Path, TextIO]) -> EncoderScheme:
         Scheme = levels[max_level]
     return Scheme(table=types)
 
+
 def get_scheme(pieces:str):
     if pieces in REGISTRY.keys():
         return REGISTRY[pieces]
     return ValueError(f'Piece {pieces} not available. \
                 Choices : [ char, word, bpe, subword, class, byte, factorizer ]')
+
 
 def encode(inp: Iterator[str], scheme: EncoderScheme, indices=False) \
         -> Iterator[Union[List[str], List[int]]]:

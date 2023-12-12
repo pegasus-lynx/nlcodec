@@ -26,6 +26,6 @@ logging.basicConfig(
     format='[%(asctime)s] p%(process)s {%(module)s:%(lineno)d} %(levelname)s - %(message)s')
 
 from nlcodec.codec import (EncoderScheme, WordScheme, CharScheme, BPEScheme, Type, Reseved,
-                           REGISTRY, ByteScheme,
+                           REGISTRY, ByteScheme, FactorizerScheme,
                            learn_vocab, load_scheme, Level, encode, decode)
 from nlcodec.dstruct import LnNode, TrNode, MaxHeap
