@@ -668,9 +668,33 @@ class FactorizerScheme(EncoderScheme):
 
     def decode_str(self, seq: List[str]) -> str:
         indices_seq = [self.str_to_idx[piece] for piece in seq]
+
+        unks = 0
+        buffer_ind = 0
+        buffer = []
         encoding_ids = []
-        for i in range(0, len(indices_seq), 3):
-            encoding_ids.append((indices_seq[i], indices_seq[i+1]-264, indices_seq[i+2]-528))
+
+        for ind in indices_seq:
+            offset = buffer_ind*264
+            buffer.append(ind-offset)
+            buffer_ind += 1
+            if buffer_ind == 3:
+                buffer_ind = 0
+                replace_unk = False
+
+                for x in buffer:
+                    if x < 0 or x > 264:
+                        replace_unk = True
+                        unks += 1
+                        break
+
+                if replace_unk:
+                    encoding_ids.append(self.tokenizer.unk_id)
+                else:
+                    encoding_ids.append(buffer)
+                buffer = []
+
+        log.info(f"Factorizer794 : decode_str - no unk replaces = {len(encoding_ids)-unks}")
         return self.tokenizer.decode(encoding_ids)    
 
     def encode(self, line: str) -> List[int]:
@@ -736,8 +760,13 @@ class Factorizer266Scheme(EncoderScheme):
     def decode_str(self, seq: List[str]) -> str:
         indices_seq = [self.str_to_idx[piece] for piece in seq]
         encoding_ids = []
-        for i in range(0, len(indices_seq), 3):
-            encoding_ids.append((indices_seq[i], indices_seq[i+1], indices_seq[i+2]))
+        buffer = []
+        for ind in indices_seq:
+            buffer.append(ind)
+            if len(buffer) == 3:
+                encoding_ids.append(tuple(buffer))
+                buffer = []
+        
         return self.tokenizer.decode(encoding_ids)    
 
     def encode(self, line: str) -> List[int]:
